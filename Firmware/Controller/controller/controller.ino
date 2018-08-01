@@ -1,16 +1,76 @@
 /*
- * Author: eejeffman
+ * Author: EEJeffMan
  * Created: 7/31/18
  * 
  * Description: Read inputs from nunchuck and send commands out via RFM69.
+ * 
+ * nunchuck code adopted from here: http://todbot.com/arduino/sketches/wii_nunchuck_servo/wii_nunchuck_servo.pde
+ * 
+ * RFM69 code adopted from here: https://github.com/LowPowerLab/RFM69
+ * 
+// **********************************************************************************
+// Copyright Felix Rusu 2018, http://www.LowPowerLab.com/contact
+// **********************************************************************************
+// License
+// **********************************************************************************
+// This program is free software; you can redistribute it 
+// and/or modify it under the terms of the GNU General    
+// Public License as published by the Free Software       
+// Foundation; either version 3 of the License, or        
+// (at your option) any later version.                    
+//                                                        
+// This program is distributed in the hope that it will   
+// be useful, but WITHOUT ANY WARRANTY; without even the  
+// implied warranty of MERCHANTABILITY or FITNESS FOR A   
+// PARTICULAR PURPOSE. See the GNU General Public        
+// License for more details.                              
+//                                                        
+// Licence can be viewed at                               
+// http://www.gnu.org/licenses/gpl-3.0.txt
+//
+// Please maintain this license information along with authorship
+// and copyright notices in any redistribution of this code
+ * 
  */
 
 #include <Wire.h>
+
+#include <RFM69.h>         //get it here: https://github.com/lowpowerlab/rfm69
+#include <RFM69_ATC.h>     //get it here: https://github.com/lowpowerlab/RFM69
+#include <RFM69_OTA.h>     //get it here: https://github.com/lowpowerlab/RFM69
+#include <SPIFlash.h> //get it here: https://www.github.com/lowpowerlab/spiflash
+#include <SPI.h> //included with Arduino IDE (www.arduino.cc)
+
+//****************************************************************************************************************
+//**** IMPORTANT RADIO SETTINGS - YOU MUST CHANGE/CONFIGURE TO MATCH YOUR HARDWARE TRANSCEIVER CONFIGURATION! ****
+//****************************************************************************************************************
+#define GATEWAYID   1
+#define NODEID      11
+#define NETWORKID   100
+//#define FREQUENCY     RF69_433MHZ
+//#define FREQUENCY     RF69_868MHZ
+#define FREQUENCY       RF69_915MHZ //Match this with the version of your Moteino! (others: RF69_433MHZ, RF69_868MHZ)
+#define ENCRYPTKEY      "sampleEncryptKey" //has to be same 16 characters/bytes on all nodes, not more not less!
+#define IS_RFM69HW_HCW  //uncomment only for RFM69HW/HCW! Leave out if you have RFM69W/CW!
+//*****************************************************************************************************************************
+//#define ENABLE_ATC      //comment out this line to disable AUTO TRANSMISSION CONTROL
+#define ATC_RSSI        -75
+//*****************************************************************************************************************************
+#define RFM69_CS_PIN    1   
+
+#ifdef ENABLE_ATC
+  RFM69_ATC radio;
+#else
+  RFM69 radio;
+#endif
 
 uint8_t outbuf[6];        // nunchuck data
 
 int ledPin = 13;
 int cnt = 0;
+
+char sendBuf[32];
+byte sendLen;
 
 void setup() {
   // put your setup code here, to run once:
@@ -18,7 +78,26 @@ void setup() {
   Wire.begin();           // I2C for nunchuck
   nunchuck_init();        // Send the initialization handshake
   // SPI init for RFM69
+  radio.initialize(FREQUENCY,NODEID,NETWORKID);
+#ifdef IS_RFM69HW_HCW
+  radio.setHighPower(); //must include this only for RFM69HW/HCW!
+#endif
+  radio.encrypt(ENCRYPTKEY);
+
+//Auto Transmission Control - dials down transmit power to save battery (-100 is the noise floor, -90 is still pretty good)
+//For indoor nodes that are pretty static and at pretty stable temperatures (like a MotionMote) -90dBm is quite safe
+//For more variable nodes that can expect to move or experience larger temp drifts a lower margin like -70 to -80 would probably be better
+//Always test your ATC mote in the edge cases in your own environment to ensure ATC will perform as you expect
+#ifdef ENABLE_ATC
+  radio.enableAutoPower(ATC_RSSI);
+#endif  
+
+  //radio.sleep();
+  pinMode(RFM69_CS_PIN, OUTPUT);
+  digitalWrite(RFM69_CS_PIN, LOW);
+
   Serial.println ("Reset");
+  radio.sendWithRetry(GATEWAYID, "RESET", 5);
 }
 
 int t = 0;  
@@ -42,6 +121,23 @@ void loop() {
     send_zero(); // send the request for next bytes
     
   } // if(t==)
+
+//************************************************************************************************
+// Example of sending data and going back to sleep with diagnostics on RF data:
+
+    sendLen = strlen(sendBuf);
+
+    if (radio.sendWithRetry(GATEWAYID, sendBuf, sendLen))
+    {
+      Serial.println("MOTION ACK:OK! RSSI:");
+      Serial.println(radio.RSSI);
+    }
+    else Serial.println("MOTION ACK:NOK...");
+
+  radio.sleep();
+  
+//************************************************************************************************
+
   delay(1);
 }
 
