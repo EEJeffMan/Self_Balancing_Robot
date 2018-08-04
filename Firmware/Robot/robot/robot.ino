@@ -3,25 +3,30 @@
 #include "I2Cdev.h"
 #include "MPU6050.h"
 #include "math.h"
-#include <NewPing.h>
+//#include <NewPing.h>
 
-#define leftMotorPWMPin   6
+/*#define leftMotorPWMPin   6
 #define leftMotorDirPin   7
 #define rightMotorPWMPin  5
-#define rightMotorDirPin  4
+#define rightMotorDirPin  4*/
 
-#define TRIGGER_PIN 9
-#define ECHO_PIN 8
-#define MAX_DISTANCE 75
+#define leftMotorFWDPin   3
+#define leftMotorREVPin   5
+#define rightMotorFWDPin  6
+#define rightMotorREVPin  9
 
-#define Kp  40
-#define Kd  0.05
-#define Ki  40
+//#define TRIGGER_PIN 9
+//#define ECHO_PIN 8
+//#define MAX_DISTANCE 75
+
+#define Kp  10//40
+#define Kd  0//0.05
+#define Ki  0//40
 #define sampleTime  0.005
-#define targetAngle -2.5
+#define targetAngle 0//-2.5
 
 MPU6050 mpu;
-NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
+//NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
 
 int16_t accY, accZ, gyroX;
 volatile int motorPower, gyroRate;
@@ -33,20 +38,28 @@ unsigned long millis_time = 0;
 
 void setMotors(int leftMotorSpeed, int rightMotorSpeed) {
   if(leftMotorSpeed >= 0) {
-    analogWrite(leftMotorPWMPin, leftMotorSpeed);
-    digitalWrite(leftMotorDirPin, LOW);
+    //analogWrite(leftMotorPWMPin, leftMotorSpeed);
+    //digitalWrite(leftMotorDirPin, LOW);
+    analogWrite(leftMotorREVPin, 0);
+    analogWrite(leftMotorFWDPin, leftMotorSpeed);   
   }
   else {
-    analogWrite(leftMotorPWMPin, 255 + leftMotorSpeed);
-    digitalWrite(leftMotorDirPin, HIGH);
+    analogWrite(leftMotorFWDPin, 0);
+    analogWrite(leftMotorREVPin, leftMotorSpeed);
+    //analogWrite(leftMotorPWMPin, 255 + leftMotorSpeed);
+    //digitalWrite(leftMotorDirPin, HIGH);
   }
   if(rightMotorSpeed >= 0) {
-    analogWrite(rightMotorPWMPin, rightMotorSpeed);
-    digitalWrite(rightMotorDirPin, LOW);
+    //analogWrite(rightMotorPWMPin, rightMotorSpeed);
+    //digitalWrite(rightMotorDirPin, LOW);
+    analogWrite(rightMotorREVPin, 0);
+    analogWrite(rightMotorFWDPin, rightMotorSpeed);
   }
   else {
-    analogWrite(rightMotorPWMPin, 255 + rightMotorSpeed);
-    digitalWrite(rightMotorDirPin, HIGH);
+    //analogWrite(rightMotorPWMPin, 255 + rightMotorSpeed);
+    //digitalWrite(rightMotorDirPin, HIGH);
+    analogWrite(rightMotorFWDPin, 0);
+    analogWrite(rightMotorREVPin, rightMotorSpeed);
   }
 }
 
@@ -76,9 +89,9 @@ void setup() {
   pinMode(13, OUTPUT);*/
   // initialize the MPU6050 and set offset values
   mpu.initialize();
-  mpu.setYAccelOffset(332);
-  mpu.setZAccelOffset(1528);
-  mpu.setXGyroOffset(87);
+  mpu.setYAccelOffset(328);
+  mpu.setZAccelOffset(1513);
+  mpu.setXGyroOffset(80);
   // initialize PID sampling loop
   init_PID();
 
@@ -96,19 +109,24 @@ unsigned long temp_time;
   accZ = mpu.getAccelerationZ();  
   gyroX = mpu.getRotationX();
   // set motor power after constraining it
-  motorPower = constrain(motorPower, -255, 255);
-  setMotors(motorPower, motorPower);
+  
+  //motorPower = constrain(motorPower, -255, 255);
+  motorPower = 255;
+  
+  //setMotors(motorPower, motorPower);
+  setMotors(255, -255);
+  
   // measure distance every 100 milliseconds
-  if((count%20) == 0){
+  /*if((count%20) == 0){
     distanceCm = sonar.ping_cm();
   }
   if((distanceCm < 20) && (distanceCm != 0)) {
     setMotors(-motorPower, motorPower);
-  }
+  }*/
 
   temp_time = millis() - millis_time;
 
-  if (temp_time > 100)
+  if (temp_time > 1000)
   {
     millis_time = millis();
     Serial.println(currentAngle);
