@@ -42,24 +42,32 @@ void setMotors(int leftMotorSpeed, int rightMotorSpeed) {
     //digitalWrite(leftMotorDirPin, LOW);
     analogWrite(leftMotorREVPin, 0);
     analogWrite(leftMotorFWDPin, leftMotorSpeed);   
+    //analogWrite(leftMotorFWDPin, 0);
+    //analogWrite(leftMotorREVPin, leftMotorSpeed);   
+    //Serial.println("Left Fwd");
   }
   else {
     analogWrite(leftMotorFWDPin, 0);
-    analogWrite(leftMotorREVPin, leftMotorSpeed);
+    analogWrite(leftMotorREVPin, abs(leftMotorSpeed));
     //analogWrite(leftMotorPWMPin, 255 + leftMotorSpeed);
     //digitalWrite(leftMotorDirPin, HIGH);
+    //Serial.println("Left Rev");
   }
   if(rightMotorSpeed >= 0) {
     //analogWrite(rightMotorPWMPin, rightMotorSpeed);
     //digitalWrite(rightMotorDirPin, LOW);
     analogWrite(rightMotorREVPin, 0);
     analogWrite(rightMotorFWDPin, rightMotorSpeed);
+    //analogWrite(rightMotorFWDPin, 0);
+    //analogWrite(rightMotorREVPin, leftMotorSpeed);
+    //Serial.println("Right Fwd");     
   }
   else {
     //analogWrite(rightMotorPWMPin, 255 + rightMotorSpeed);
     //digitalWrite(rightMotorDirPin, HIGH);
     analogWrite(rightMotorFWDPin, 0);
-    analogWrite(rightMotorREVPin, rightMotorSpeed);
+    analogWrite(rightMotorREVPin, abs(rightMotorSpeed));
+    //Serial.println("Right Rev");
   }
 }
 
@@ -110,11 +118,11 @@ unsigned long temp_time;
   gyroX = mpu.getRotationX();
   // set motor power after constraining it
   
-  //motorPower = constrain(motorPower, -255, 255);
-  motorPower = 255;
+  motorPower = constrain(motorPower, -255, 255);
+  //motorPower = 255;
   
-  //setMotors(motorPower, motorPower);
-  setMotors(255, -255);
+  setMotors(motorPower, motorPower);
+  //setMotors(255, -255);
   
   // measure distance every 100 milliseconds
   /*if((count%20) == 0){
